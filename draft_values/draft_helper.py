@@ -1,4 +1,3 @@
-import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.support.select import Select
 from selenium.webdriver.common.by import By
@@ -12,6 +11,9 @@ import time
 import pickle
 import math
 import sys
+import itertools
+import numpy as np
+import pandas as pd
 
 
 def init(link):
@@ -115,14 +117,13 @@ def max_sum_subarray(df, k, cost_limit):
             current_cost += row[DOLLARS]
             subarray.append(
                 {"name": row["Name"], "cost": row["Dollars"], "value": row[VALUE], "index": row["#"]})
-        elif len(subarray) == 13:
+        if len(subarray) == 13:
             if current_sum > max_sum:
                 max_sum = current_sum
                 max_array = subarray
                 print("new best ++++++++++", current_sum, current_cost)
-            print("++++++++++")
-            for x in subarray:
-                print(x)
+                for x in subarray:
+                    print(x)
             elem = subarray.pop()
             index = elem['index']
             i = index - 1
@@ -143,12 +144,86 @@ def max_sum_subarray(df, k, cost_limit):
     return max_array, subarray
 
 
+# def find_best_team(df, salary_cap):
+#     best_team = None
+#     best_score = 0
+#     for team in itertools.combinations(df.index, 13):
+#         print(team)
+#         # salary = 0
+#         # score = 0
+#         # names = []
+#         # for x in team:
+#         #     salary += df.loc[(x, 'Dollars')]
+#         #     score += df.loc[(x, 'VALUE')]
+#         #     names.append(df.loc[(x, 'Name')])
+#         # if salary <= salary_cap:
+#         #     if score > best_score:
+#         #         best_score = score
+#         #         best_team = team
+#         #         print("++++++")
+#         #         print(names)
+#     return df.loc[best_team, :]
+
+
+# def find_best_team(df, salary_cap):
+#     num_players = df.shape[0]
+
+#     # Define the objective function
+#     c = df['VALUE'].to_numpy()
+#     A_ub = np.array([df['Dollars'].to_numpy()])
+#     b_ub = np.array([salary_cap])
+
+#     # Define the bounds for each decision variable
+#     bounds = [(0, 1) for i in range(num_players)]
+
+#     # Solve the linear programming problem
+#     res = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds, method='simplex',
+#                   options={"disp": False})
+
+#     # Extract the team with the highest points
+#     team = df[res.x >= 1.0 / num_players].copy()
+#     return team
+
+
+def find_best_team(df, salary_cap):
+    max_points = -np.inf
+    best_team = []
+    df2 = df[['Dollars', 'VALUEOPS', 'Name']].copy()
+    print(df2)
+
+    def branch_and_bound(start, remaining, salary, points, depth):
+        nonlocal max_points, best_team
+
+        # Check if we have reached the desired depth
+        if depth == 15:
+            # print("salary", salary)
+            # print("points", points)
+            # print("max_points", max_points)
+            if points > max_points and salary <= salary_cap:
+                print(best_team)
+                print("+++++++++++++", points, salary)
+                max_points = points
+                best_team = start
+            return
+
+        for i, player in enumerate(remaining):
+            if salary + player['Dollars'] > salary_cap:
+                continue
+            branch_and_bound(start + [player], remaining[i+1:], salary +
+                             player['Dollars'], points + player['VALUEOPS'], depth + 1)
+
+    branch_and_bound([], df2.to_dict(orient='records'), 0, 0, 0)
+    return best_team
+
+
 if __name__ == '__main__':
     df = pd.read_excel('top_200_with_values.xlsx')
-    df.sort_values(by=['VALUEOPS'])
-    max_sum, subarr = max_sum_subarray(df, 13, 260)
+    # df.sort_values(by=['VALUEOPS'])
+    # max_sum, subarr = max_sum_subarray(df, 13, 260)
+
+    print(find_best_team(df, 200))
     # for x in subarr:
     #     print(x)
     # print("+++++++++++++")
-    for x in max_sum:
-        print(x)
+    # for x in max_sum:
+    #     print(x)
