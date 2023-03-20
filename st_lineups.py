@@ -42,9 +42,9 @@ dates = ['03/17/2022', '03/18/2022', '03/19/2022',
          '03/20/2022', '03/21/2022', '03/22/2022', '03/23/2022']
 
 
-b = init('https://www.baseballpress.com/lineups/2022-03-17')
+b = init('https://www.baseballpress.com/lineups/2023-02-24')
 time.sleep(0.5)
-tomorrow = date.today() + timedelta(days=1)
+tomorrow = date.today()
 today = date.today().strftime('%m-%d-%Y')
 print(today)
 

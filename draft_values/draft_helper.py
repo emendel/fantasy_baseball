@@ -29,28 +29,75 @@ def init(link):
 
 
 BATTING_TARGETS = [1100, 320, 1080, 140, 0.8]
+PITCHING_TARGETS = [105, 75, 1440, 3.4, 1.17, 20]
+# PITCHER_STATS = [0, row.SV, 0, row.ERA, row.IP]
+# BATTER_STATS = [row.R, row.HR, row.RBI, row.SB, row.OPS]
+PITCH_CATS = ["QS", "SV", "SO", "ERA", "WHIP", "IP", "G"]
+
 MY_TEAM = [0, 0, 0, 0, 0]
 
 
 def best_players():
-    batters_df = pd.read_excel('top_200_batters.xlsx')
-    # batters_df[]
-    for i, row in batters_df.iterrows():
-        player_stats = [row.R, row.HR, row.RBI, row.SB, 0]
-        batters_df.loc[(i, 'VALUE')] = calculate_value(
-            player_stats, BATTING_TARGETS)
-        player_stats = [row.R, row.HR, row.RBI, row.SB, row.OPS]
-        batters_df.loc[(i, 'VALUEOPS')] = calculate_value(
-            player_stats, BATTING_TARGETS)
+    # df = pd.read_excel('top_200_batters.xlsx')
+    df = pd.read_excel('top_400_pitchers.xlsx')
+    df2 = df.sort_values(by=["QS"], ascending=False).head(80)
+    qs_avg = df2["QS"].mean()
+    qs_std = df2["QS"].std()
+    df2 = df.sort_values(by=["SO"], ascending=False).head(80)
+    so_avg = df2["SO"].mean()
+    so_std = df2["SO"].std()
+    df2 = df.sort_values(by=["SV"], ascending=False).head(40)
+    sv_avg = df2["SV"].mean()
+    sv_std = df2["SV"].std()
+    df2 = df.sort_values(by=["WHIP"], ascending=True).head(105)
+    whip_avg = df2["WHIP"].mean()
+    whip_std = df2["WHIP"].std()
+    df2 = df.sort_values(by=["ERA"], ascending=True).head(105)
+    era_avg = df2["ERA"].mean()
+    era_std = df2["ERA"].std()
+    ip_avg = df.sort_values(by=["IP"], ascending=False).head(80)["IP"].mean()
+    ip_std = df.sort_values(by=["IP"], ascending=False).head(80)["IP"].std()
+    print("qs", qs_avg, qs_std)
+    print("so", so_avg, so_std)
+    print("sv", sv_avg, sv_std)
+    print("whip", whip_avg, whip_std)
+    print("era", era_avg, era_std)
+    print("ip", ip_avg, ip_std)
+
+    for i, row in df.iterrows():
+        player_stats = [row.QS, row.SV, row.SO,
+                        row.ERA, row.WHIP, row.IP, row.G]
+        df.loc[(i, 'VALUE')] = calculate_value_pitcher(
+            player_stats, PITCHING_TARGETS)
+        df.loc[(i, 'QS_VALUE')] = (row.QS - qs_avg) / qs_std
+        df.loc[(i, 'SO_VALUE')] = (row.SO - so_avg) / so_std
+        df.loc[(i, 'SV_VALUE')] = (row.SV - sv_avg) / sv_std
+        # player_stats = [row.R, row.HR, row.RBI, row.SB, row.OPS]
+        # df.loc[(i, 'VALUEOPS')] = calculate_value_batter(
+        #     player_stats, BATTING_TARGETS)
 
     cost_map = average_cost()
     for x in cost_map.keys():
-        batters_df.loc[batters_df['Name'] == x, 'Dollars'] = cost_map[x]
+        df.loc[df['Name'] == x, 'Dollars'] = cost_map[x]
 
-    batters_df.to_excel('top_200_with_values.xlsx')
+    df.to_excel('pitchrs_with_values.xlsx')
 
 
-def calculate_value(player, targets):
+def calculate_value_pitcher(player, targets):
+    qs = player[0] / targets[0] * 100 if player[0] else 0
+    saves = player[1] / targets[1] * 100 if player[1] else 0
+    so = player[2] / targets[2] * 100 if player[2] else 0
+    era = whip = 0
+    ip_weight = (player[5]/player[6]) / targets[5]
+    era = (targets[3] - player[3]) * ip_weight * 100
+    whip = (targets[4] - player[4]) * ip_weight * 100
+    # era = ip_weight * player[3]
+    # era = player[3] / targets[3] * 100 if player[3] else 0
+    # whip = player[4] / targets[4] * 100 if player[4] else 0
+    return qs+saves+so+era+whip
+
+
+def calculate_value_batter(player, targets):
     runs = player[0] / targets[0] * 100 if player[0] else 0
     hr = player[1] / targets[1] * 100 if player[1] else 0
     rbi = player[2] / targets[2] * 100 if player[2] else 0
@@ -93,57 +140,6 @@ def average_cost():
     return players_with_cost
 
 
-def max_sum_subarray(df, k, cost_limit):
-    VALUE = 'VALUEOPS'
-    DOLLARS = 'Dollars'
-    max_sum = 0
-    current_sum = 0
-    subarray = []
-    max_array = []
-    current_cost = 0
-    max_sum = 0
-    i = 0
-    # for i, row in df.iterrows():
-    while i < len(df):
-        # print(subarray)
-        row = df.loc[i]
-        if current_sum == 0:
-            current_sum += row[VALUE]
-            current_cost += row[DOLLARS]
-            subarray.append(
-                {"name": row["Name"], "cost": row["Dollars"], "value": row[VALUE], "index": row["#"]})
-        elif current_cost + row[DOLLARS] <= cost_limit:
-            current_sum += row[VALUE]
-            current_cost += row[DOLLARS]
-            subarray.append(
-                {"name": row["Name"], "cost": row["Dollars"], "value": row[VALUE], "index": row["#"]})
-        if len(subarray) == 13:
-            if current_sum > max_sum:
-                max_sum = current_sum
-                max_array = subarray
-                print("new best ++++++++++", current_sum, current_cost)
-                for x in subarray:
-                    print(x)
-            elem = subarray.pop()
-            index = elem['index']
-            i = index - 1
-            current_cost -= elem['cost']
-            current_sum -= elem['value']
-
-            # return 0, subarray
-        elif i == len(df) - 1 and len(subarray) != 13:
-            elem = subarray.pop()
-            index = elem['index']
-            i = index - 1
-            current_cost -= elem['cost']
-            current_sum -= elem['value']
-        i += 1
-
-    print(len(df))
-
-    return max_array, subarray
-
-
 # def find_best_team(df, salary_cap):
 #     best_team = None
 #     best_score = 0
@@ -163,26 +159,6 @@ def max_sum_subarray(df, k, cost_limit):
 #         #         print("++++++")
 #         #         print(names)
 #     return df.loc[best_team, :]
-
-
-# def find_best_team(df, salary_cap):
-#     num_players = df.shape[0]
-
-#     # Define the objective function
-#     c = df['VALUE'].to_numpy()
-#     A_ub = np.array([df['Dollars'].to_numpy()])
-#     b_ub = np.array([salary_cap])
-
-#     # Define the bounds for each decision variable
-#     bounds = [(0, 1) for i in range(num_players)]
-
-#     # Solve the linear programming problem
-#     res = linprog(c, A_ub=A_ub, b_ub=b_ub, bounds=bounds, method='simplex',
-#                   options={"disp": False})
-
-#     # Extract the team with the highest points
-#     team = df[res.x >= 1.0 / num_players].copy()
-#     return team
 
 
 def find_best_team(df, salary_cap):
@@ -217,13 +193,9 @@ def find_best_team(df, salary_cap):
 
 
 if __name__ == '__main__':
-    df = pd.read_excel('top_200_with_values.xlsx')
+    best_players()
+    # df = pd.read_excel('top_200_with_values.xlsx')
     # df.sort_values(by=['VALUEOPS'])
     # max_sum, subarr = max_sum_subarray(df, 13, 260)
 
-    print(find_best_team(df, 200))
-    # for x in subarr:
-    #     print(x)
-    # print("+++++++++++++")
-    # for x in max_sum:
-    #     print(x)
+    # print(find_best_team(df, 200))

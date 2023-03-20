@@ -73,7 +73,7 @@ def write_draft(file, players):
 
 def get_browser_session():
     browser = init(
-        'https://baseball.fantasysports.yahoo.com/b1/33734/draftresults')
+        'https://baseball.fantasysports.yahoo.com/2022/b1/33734/draftresults?pspid=97444672&activity=draftresults')
     action = ActionChains(browser)
     action.send_keys("ezra.mendelson", Keys.ENTER)
     action.perform()
